@@ -6,9 +6,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface DocumentUploadProps {
   onUploadSuccess: () => void;
+  disabled?: boolean;
 }
 
-const DocumentUpload = ({ onUploadSuccess }: DocumentUploadProps) => {
+const DocumentUpload = ({ onUploadSuccess, disabled = false }: DocumentUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<Map<string, 'uploading' | 'success' | 'error'>>(new Map());
   const { toast } = useToast();
@@ -24,6 +25,15 @@ const DocumentUpload = ({ onUploadSuccess }: DocumentUploadProps) => {
   }, []);
 
   const uploadFile = async (file: File) => {
+    if (disabled) {
+      toast({
+        title: "Backend not connected",
+        description: "Please ensure the FastAPI server is running",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       toast({
         title: "Invalid file type",
@@ -90,15 +100,16 @@ const DocumentUpload = ({ onUploadSuccess }: DocumentUploadProps) => {
   return (
     <div className="space-y-4">
       <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        onDragOver={disabled ? undefined : handleDragOver}
+        onDragLeave={disabled ? undefined : handleDragLeave}
+        onDrop={disabled ? undefined : handleDrop}
         className={`
           relative rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-300
-          ${isDragging 
+          ${disabled 
+            ? 'opacity-50 cursor-not-allowed border-muted'
+            : isDragging
             ? 'border-primary bg-primary/5 scale-[1.02]' 
-            : 'border-border hover:border-primary/50 hover:bg-secondary/50'
-          }
+            : 'border-border hover:border-primary/50 hover:bg-secondary/50'}
         `}
       >
         <input
@@ -106,6 +117,7 @@ const DocumentUpload = ({ onUploadSuccess }: DocumentUploadProps) => {
           accept=".pdf"
           multiple
           onChange={handleFileSelect}
+          disabled={disabled}
           className="absolute inset-0 cursor-pointer opacity-0"
         />
         
