@@ -4,14 +4,21 @@ import HeroSection from "@/components/HeroSection";
 import DocumentUpload from "@/components/DocumentUpload";
 import DocumentList from "@/components/DocumentList";
 import ChatInterface from "@/components/ChatInterface";
+import ConnectionStatus from "@/components/ConnectionStatus";
 import { api } from "@/lib/api";
 
 const Index = () => {
   const [documents, setDocuments] = useState<string[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   const mainSectionRef = useRef<HTMLElement>(null);
 
   const fetchDocuments = async () => {
+    if (!isConnected) {
+      setIsLoadingDocs(false);
+      return;
+    }
+    
     try {
       const docs = await api.listPdfs();
       setDocuments(docs);
@@ -23,8 +30,17 @@ const Index = () => {
   };
 
   useEffect(() => {
-    fetchDocuments();
-  }, []);
+    if (isConnected) {
+      fetchDocuments();
+    }
+  }, [isConnected]);
+
+  const handleConnectionChange = (connected: boolean) => {
+    setIsConnected(connected);
+    if (connected) {
+      setIsLoadingDocs(true);
+    }
+  };
 
   const scrollToMain = () => {
     mainSectionRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -39,13 +55,18 @@ const Index = () => {
       <main ref={mainSectionRef} className="container py-16 lg:py-24">
         <div className="mx-auto max-w-6xl">
           {/* Section Header */}
-          <div className="mb-12 text-center">
+          <div className="mb-8 text-center">
             <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
               Your Study Workspace
             </h2>
             <p className="mt-3 text-lg text-muted-foreground">
               Upload materials, manage your library, and chat with AI
             </p>
+          </div>
+
+          {/* Connection Status */}
+          <div className="mb-8 flex justify-center">
+            <ConnectionStatus onConnectionChange={handleConnectionChange} />
           </div>
 
           <div className="grid gap-8 lg:grid-cols-5">
@@ -56,22 +77,29 @@ const Index = () => {
                 <h3 className="font-display text-xl font-semibold text-foreground mb-4">
                   Upload Materials
                 </h3>
-                <DocumentUpload onUploadSuccess={fetchDocuments} />
+                <DocumentUpload 
+                  onUploadSuccess={fetchDocuments} 
+                  disabled={!isConnected}
+                />
               </section>
 
               {/* Document Library */}
               <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
                 <DocumentList
                   documents={documents}
-                  isLoading={isLoadingDocs}
+                  isLoading={isLoadingDocs && isConnected}
                   onDocumentRemoved={fetchDocuments}
+                  disabled={!isConnected}
                 />
               </section>
             </div>
 
             {/* Right - Chat Interface */}
             <div className="lg:col-span-3">
-              <ChatInterface hasDocuments={documents.length > 0} />
+              <ChatInterface 
+                hasDocuments={documents.length > 0} 
+                isConnected={isConnected}
+              />
             </div>
           </div>
         </div>

@@ -8,9 +8,10 @@ interface DocumentListProps {
   documents: string[];
   isLoading: boolean;
   onDocumentRemoved: () => void;
+  disabled?: boolean;
 }
 
-const DocumentList = ({ documents, isLoading, onDocumentRemoved }: DocumentListProps) => {
+const DocumentList = ({ documents, isLoading, onDocumentRemoved, disabled = false }: DocumentListProps) => {
   const [deletingDoc, setDeletingDoc] = useState<string | null>(null);
   const { toast } = useToast();
 

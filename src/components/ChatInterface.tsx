@@ -13,9 +13,10 @@ interface Message {
 
 interface ChatInterfaceProps {
   hasDocuments: boolean;
+  isConnected?: boolean;
 }
 
-const ChatInterface = ({ hasDocuments }: ChatInterfaceProps) => {
+const ChatInterface = ({ hasDocuments, isConnected = true }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +33,7 @@ const ChatInterface = ({ hasDocuments }: ChatInterfaceProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !hasDocuments) return;
+    if (!input.trim() || isLoading || !hasDocuments || !isConnected) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -90,13 +91,18 @@ const ChatInterface = ({ hasDocuments }: ChatInterfaceProps) => {
             Study Assistant
           </h3>
           <p className="text-xs text-muted-foreground">
-            {hasDocuments ? "Ask anything about your documents" : "Upload documents to start"}
+            {!isConnected 
+              ? "Connect to backend to start" 
+              : hasDocuments 
+                ? "Ask anything about your documents" 
+                : "Upload documents to start"
+            }
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${hasDocuments ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+          <span className={`h-2 w-2 rounded-full ${!isConnected ? 'bg-destructive' : hasDocuments ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
           <span className="text-xs text-muted-foreground">
-            {hasDocuments ? 'Ready' : 'Waiting'}
+            {!isConnected ? 'Offline' : hasDocuments ? 'Ready' : 'Waiting'}
           </span>
         </div>
       </div>
@@ -112,12 +118,14 @@ const ChatInterface = ({ hasDocuments }: ChatInterfaceProps) => {
               Ready to Help You Study
             </h4>
             <p className="mt-2 max-w-sm text-muted-foreground">
-              {hasDocuments 
-                ? "Ask any question about your uploaded materials and I'll find the answers!"
-                : "Upload some PDFs first, then start asking questions about your study materials."
+              {!isConnected
+                ? "Connect to the backend server first, then upload your study materials."
+                : hasDocuments 
+                  ? "Ask any question about your uploaded materials and I'll find the answers!"
+                  : "Upload some PDFs first, then start asking questions about your study materials."
               }
             </p>
-            {hasDocuments && (
+            {hasDocuments && isConnected && (
               <div className="mt-6 flex flex-wrap gap-2 justify-center">
                 {["Summarize the key concepts", "What are the main topics?", "Explain the important formulas"].map((suggestion) => (
                   <button
@@ -163,8 +171,8 @@ const ChatInterface = ({ hasDocuments }: ChatInterfaceProps) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={hasDocuments ? "Ask about your study materials..." : "Upload documents first..."}
-              disabled={!hasDocuments || isLoading}
+              placeholder={!isConnected ? "Connect to backend first..." : hasDocuments ? "Ask about your study materials..." : "Upload documents first..."}
+              disabled={!hasDocuments || isLoading || !isConnected}
               rows={1}
               className="w-full resize-none rounded-xl border border-input bg-background px-4 py-3 pr-12 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ minHeight: '48px', maxHeight: '120px' }}
@@ -173,7 +181,7 @@ const ChatInterface = ({ hasDocuments }: ChatInterfaceProps) => {
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || isLoading || !hasDocuments}
+            disabled={!input.trim() || isLoading || !hasDocuments || !isConnected}
             className="h-12 w-12 shrink-0 rounded-xl"
           >
             <Send className="h-5 w-5" />
