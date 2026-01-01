@@ -14,10 +14,7 @@ const Index = () => {
   const mainSectionRef = useRef<HTMLElement>(null);
 
   const fetchDocuments = async () => {
-    if (!isConnected) {
-      setIsLoadingDocs(false);
-      return;
-    }
+    setIsLoadingDocs(true);
     
     try {
       const docs = await api.listPdfs();
@@ -32,14 +29,13 @@ const Index = () => {
   useEffect(() => {
     if (isConnected) {
       fetchDocuments();
+    } else {
+      setIsLoadingDocs(false);
     }
   }, [isConnected]);
 
   const handleConnectionChange = (connected: boolean) => {
     setIsConnected(connected);
-    if (connected) {
-      setIsLoadingDocs(true);
-    }
   };
 
   const scrollToMain = () => {

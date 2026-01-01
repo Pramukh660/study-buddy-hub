@@ -1,0 +1,20 @@
+[project]
+name = "revision"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "faiss-cpu>=1.13.2",
+    "fastapi>=0.127.1",
+    "langchain>=1.2.0",
+    "langchain-classic>=1.0.1",
+    "langchain-community>=0.4.1",
+    "langchain-ollama>=1.0.1",
+    "ollama>=0.6.1",
+    "pymupdf>=1.26.7",
+    "pypdf>=6.5.0",
+    "python-multipart>=0.0.21",
+    "tqdm>=4.67.1",
+    "uvicorn>=0.40.0",
+]

@@ -153,7 +153,7 @@ const ChatInterface = ({ hasDocuments, isConnected = true }: ChatInterfaceProps)
             <div className="rounded-2xl rounded-tl-md bg-secondary px-4 py-3">
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">Searching your documents...</span>
+                <span className="text-sm text-muted-foreground">....</span>
               </div>
             </div>
           </div>
