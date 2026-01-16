@@ -1,6 +1,7 @@
 # main.py - FastAPI Backend for Exam Revision Chatbot (NO AUTHENTICATION)
 
 import os
+from dotenv import load_dotenv
 import shutil
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -10,7 +11,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_ollama import OllamaEmbeddings, ChatOllama
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain_classic.chains import RetrievalQA
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,8 +40,15 @@ qa_chain = None
 PDF_DIRECTORY = "./pdf_documents"
 VECTOR_DB_PATH = "./vector_db"
 
-OLLAMA_EMBED_MODEL = "nomic-embed-text"
-OLLAMA_LLM_MODEL = "llama3.2:1b"
+load_dotenv()
+# Open Router API Configuration
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENAI_API_BASE = os.getenv("OPENAI_API_BASE")
+if not OPENROUTER_API_KEY:
+    raise ValueError("OPENROUTER_API_KEY environment variable not set")
+
+EMBED_MODEL = "text-embedding-3-small"  # OpenAI embedding model
+LLM_MODEL = "meta-llama/llama-3.2-1b-instruct"  # Using Open Router
 
 # Ensure directories exist
 os.makedirs(PDF_DIRECTORY, exist_ok=True)
@@ -48,18 +56,16 @@ Path(VECTOR_DB_PATH).mkdir(exist_ok=True)
 
 
 # ==================== MODELS ====================
-embedding_model = OllamaEmbeddings(
-    model=OLLAMA_EMBED_MODEL,
-    base_url="http://localhost:11434",
-    num_gpu=0,
-    num_thread=8
+embedding_model = OpenAIEmbeddings(
+    model=EMBED_MODEL,
+    api_key=OPENROUTER_API_KEY
 )
 
-llm = ChatOllama(
-    model=OLLAMA_LLM_MODEL,
+llm = ChatOpenAI(
+    model=LLM_MODEL,
     temperature=0,
-    num_gpu=0,
-    num_thread=8
+    api_key=OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1"
 )
 
 
@@ -307,4 +313,4 @@ async def chat(query: dict):
 # ==================== RUN ====================
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False, workers=3)
