@@ -11,6 +11,12 @@ export interface UploadResponse {
   filename: string;
 }
 
+export interface LoginResponse {
+  access_token: string;
+  username: string;
+  message: string;
+}
+
 export interface ConnectionStatus {
   connected: boolean;
   lastChecked: Date;
@@ -20,6 +26,13 @@ export interface ConnectionStatus {
 let connectionStatus: ConnectionStatus = {
   connected: false,
   lastChecked: new Date(),
+};
+
+// Callback for handling 401 unauthorized
+let onUnauthorizedCallback: (() => void) | null = null;
+
+export const setUnauthorizedCallback = (callback: () => void) => {
+  onUnauthorizedCallback = callback;
 };
 
 export const getConnectionStatus = () => connectionStatus;
@@ -39,13 +52,103 @@ const handleFetchError = (error: unknown, operation: string): never => {
   throw new Error(`${operation}: ${errorMessage}`);
 };
 
+const getAuthHeader = (): HeadersInit => {
+  const token = localStorage.getItem('authToken');
+  return {
+    'Authorization': token ? `Bearer ${token}` : '',
+    'Content-Type': 'application/json',
+  };
+};
+
+const handleUnauthorized = () => {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('username');
+  if (onUnauthorizedCallback) {
+    onUnauthorizedCallback();
+  }
+};
+
+const checkResponseStatus = async (response: Response): Promise<Response> => {
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new Error('Unauthorized');
+  }
+  return response;
+};
+
 export const api = {
+  async register(username: string, password: string): Promise<LoginResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Registration failed with status ${response.status}`);
+      }
+
+      const data: LoginResponse = await response.json();
+      localStorage.setItem('authToken', data.access_token);
+      localStorage.setItem('username', data.username);
+      connectionStatus = { connected: true, lastChecked: new Date() };
+      return data;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      throw new Error(errorMessage);
+    }
+  },
+
+  async login(username: string, password: string): Promise<LoginResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Login failed with status ${response.status}`);
+      }
+
+      const data: LoginResponse = await response.json();
+      localStorage.setItem('authToken', data.access_token);
+      localStorage.setItem('username', data.username);
+      connectionStatus = { connected: true, lastChecked: new Date() };
+      return data;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      throw new Error(errorMessage);
+    }
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await fetch(`${API_BASE_URL}/logout`, {
+        method: 'POST',
+        headers: getAuthHeader(),
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('username');
+    }
+  },
+
   async checkConnection(): Promise<boolean> {
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`${API_BASE_URL}/list_pdfs`, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000), // 5 second timeout
+        headers: getAuthHeader(),
+        signal: AbortSignal.timeout(5000),
       });
+
+      await checkResponseStatus(response);
       
       connectionStatus = {
         connected: response.ok,
@@ -68,26 +171,47 @@ export const api = {
     formData.append('file', file);
 
     try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Not authenticated. Please log in first.');
+      }
+
       const response = await fetch(`${API_BASE_URL}/upload_pdf`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
 
+      await checkResponseStatus(response);
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to upload PDF');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Upload failed with status ${response.status}`);
       }
 
       connectionStatus = { connected: true, lastChecked: new Date() };
       return response.json();
     } catch (error) {
-      return handleFetchError(error, 'Upload failed');
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      throw new Error(errorMessage);
     }
   },
 
   async listPdfs(): Promise<string[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/list_pdfs`);
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        return [];
+      }
+
+      const response = await fetch(`${API_BASE_URL}/list_pdfs`, {
+        method: 'GET',
+        headers: getAuthHeader(),
+      });
+
+      await checkResponseStatus(response);
 
       if (!response.ok) {
         throw new Error('Failed to fetch PDFs');
@@ -96,7 +220,8 @@ export const api = {
       connectionStatus = { connected: true, lastChecked: new Date() };
       return response.json();
     } catch (error) {
-      return handleFetchError(error, 'Failed to list documents');
+      console.error('Error listing PDFs:', error);
+      return [];
     }
   },
 
@@ -104,7 +229,10 @@ export const api = {
     try {
       const response = await fetch(`${API_BASE_URL}/remove_pdf/${encodeURIComponent(filename)}`, {
         method: 'DELETE',
+        headers: getAuthHeader(),
       });
+
+      await checkResponseStatus(response);
 
       if (!response.ok) {
         const error = await response.json();
@@ -122,11 +250,11 @@ export const api = {
     try {
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeader(),
         body: JSON.stringify({ query }),
       });
+
+      await checkResponseStatus(response);
 
       if (!response.ok) {
         const error = await response.json();

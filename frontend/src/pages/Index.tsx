@@ -5,12 +5,13 @@ import DocumentUpload from "@/components/DocumentUpload";
 import DocumentList from "@/components/DocumentList";
 import ChatInterface from "@/components/ChatInterface";
 import ConnectionStatus from "@/components/ConnectionStatus";
+import { useAuth } from "@/contexts/useAuth";
 import { api } from "@/lib/api";
 
 const Index = () => {
+  const { isAuthenticated } = useAuth();
   const [documents, setDocuments] = useState<string[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
   const mainSectionRef = useRef<HTMLElement>(null);
 
   const fetchDocuments = async () => {
@@ -27,15 +28,15 @@ const Index = () => {
   };
 
   useEffect(() => {
-    if (isConnected) {
+    if (isAuthenticated) {
       fetchDocuments();
-    } else {
-      setIsLoadingDocs(false);
     }
-  }, [isConnected]);
+  }, [isAuthenticated]);
 
   const handleConnectionChange = (connected: boolean) => {
-    setIsConnected(connected);
+    if (connected) {
+      fetchDocuments();
+    }
   };
 
   const scrollToMain = () => {
@@ -75,7 +76,7 @@ const Index = () => {
                 </h3>
                 <DocumentUpload 
                   onUploadSuccess={fetchDocuments} 
-                  disabled={!isConnected}
+                  disabled={!isAuthenticated}
                 />
               </section>
 
@@ -83,9 +84,9 @@ const Index = () => {
               <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
                 <DocumentList
                   documents={documents}
-                  isLoading={isLoadingDocs && isConnected}
+                  isLoading={isLoadingDocs && isAuthenticated}
                   onDocumentRemoved={fetchDocuments}
-                  disabled={!isConnected}
+                  disabled={!isAuthenticated}
                 />
               </section>
             </div>
@@ -94,7 +95,7 @@ const Index = () => {
             <div className="lg:col-span-3">
               <ChatInterface 
                 hasDocuments={documents.length > 0} 
-                isConnected={isConnected}
+                isConnected={isAuthenticated}
               />
             </div>
           </div>
