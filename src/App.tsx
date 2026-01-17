@@ -33,7 +33,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename="/study-buddy-hub">
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginForm />} />
