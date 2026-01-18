@@ -1,13 +1,15 @@
 import { BookOpen, Sparkles, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/useAuth";
 import { Button } from "./ui/button";
 
 const Header = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
-    window.location.href = '/';
+    navigate('/login', { replace: true });
   };
 
   return (
