@@ -1,5 +1,5 @@
 // API configuration for the FastAPI backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://study-buddy-hub-backend.onrender.com';
 
 export interface ChatResponse {
   response: string;
